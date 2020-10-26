@@ -15,14 +15,14 @@ namespace util
 
 namespace detail
 {
-template <typename T, typename MmapContainerT>
-util::vector_view<T> mmapFile(const boost::filesystem::path &file, MmapContainerT &mmap_container)
+template <typename T, typename RegionT>
+util::vector_view<T> mmapFile(const boost::filesystem::path &file, RegionT &region)
 {
     try
     {
-        mmap_container.open(file);
-        std::size_t num_objects = mmap_container.size() / sizeof(T);
-        auto data_ptr = mmap_container.data();
+        region.open(file);
+        std::size_t num_objects = region.size() / sizeof(T);
+        auto data_ptr = region.data();
         BOOST_ASSERT(reinterpret_cast<uintptr_t>(data_ptr) % alignof(T) == 0);
         return util::vector_view<T>(reinterpret_cast<T *>(data_ptr), num_objects);
     }
@@ -34,10 +34,9 @@ util::vector_view<T> mmapFile(const boost::filesystem::path &file, MmapContainer
     }
 }
 
-template <typename T, typename MmapContainerT>
-util::vector_view<T> mmapFile(const boost::filesystem::path &file,
-                              MmapContainerT &mmap_container,
-                              const std::size_t size)
+template <typename T, typename RegionT>
+util::vector_view<T>
+mmapFile(const boost::filesystem::path &file, RegionT &region, const std::size_t size)
 {
     try
     {
@@ -46,10 +45,10 @@ util::vector_view<T> mmapFile(const boost::filesystem::path &file,
         params.path = file.string();
         params.flags = boost::iostreams::mapped_file::readwrite;
         params.new_file_size = size;
-        mmap_container.open(params);
+        region.open(params);
 
         std::size_t num_objects = size / sizeof(T);
-        auto data_ptr = mmap_container.data();
+        auto data_ptr = region.data();
         BOOST_ASSERT(reinterpret_cast<uintptr_t>(data_ptr) % alignof(T) == 0);
         return util::vector_view<T>(reinterpret_cast<T *>(data_ptr), num_objects);
     }
@@ -64,24 +63,24 @@ util::vector_view<T> mmapFile(const boost::filesystem::path &file,
 
 template <typename T>
 util::vector_view<const T> mmapFile(const boost::filesystem::path &file,
-                                    boost::iostreams::mapped_file_source &mmap_container)
+                                    boost::iostreams::mapped_file_source &region)
 {
-    return detail::mmapFile<const T>(file, mmap_container);
+    return detail::mmapFile<const T>(file, region);
 }
 
 template <typename T>
 util::vector_view<T> mmapFile(const boost::filesystem::path &file,
-                              boost::iostreams::mapped_file &mmap_container)
+                              boost::iostreams::mapped_file &region)
 {
-    return detail::mmapFile<T>(file, mmap_container);
+    return detail::mmapFile<T>(file, region);
 }
 
 template <typename T>
 util::vector_view<T> mmapFile(const boost::filesystem::path &file,
-                              boost::iostreams::mapped_file &mmap_container,
+                              boost::iostreams::mapped_file &region,
                               std::size_t size)
 {
-    return detail::mmapFile<T>(file, mmap_container, size);
+    return detail::mmapFile<T>(file, region, size);
 }
 }
 }

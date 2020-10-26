@@ -9,14 +9,11 @@
 #include "osrm/trip_parameters.hpp"
 
 #include <exception>
-#include <sstream>
 #include <type_traits>
 #include <utility>
 
 #include "nodejs/node_osrm.hpp"
 #include "nodejs/node_osrm_support.hpp"
-
-#include "util/json_renderer.hpp"
 
 namespace node_osrm
 {
@@ -125,8 +122,6 @@ inline void async(const Nan::FunctionCallbackInfo<v8::Value> &info,
     if (!params)
         return;
 
-    auto pluginParams = argumentsToPluginParameters(info);
-
     BOOST_ASSERT(params->IsValid());
 
     if (!info[info.Length() - 1]->IsFunction())
@@ -142,30 +137,16 @@ inline void async(const Nan::FunctionCallbackInfo<v8::Value> &info,
         Worker(std::shared_ptr<osrm::OSRM> osrm_,
                ParamPtr params_,
                ServiceMemFn service,
-               Nan::Callback *callback,
-               PluginParameters pluginParams_)
+               Nan::Callback *callback)
             : Base(callback), osrm{std::move(osrm_)}, service{std::move(service)},
-              params{std::move(params_)}, pluginParams{std::move(pluginParams_)}
+              params{std::move(params_)}
         {
         }
 
         void Execute() override try
         {
-            osrm::engine::api::ResultT r;
-            r = osrm::util::json::Object();
-            const auto status = ((*osrm).*(service))(*params, r);
-            auto json_result = r.get<osrm::json::Object>();
-            ParseResult(status, json_result);
-            if (pluginParams.renderJSONToBuffer)
-            {
-                std::ostringstream buf;
-                osrm::util::json::render(buf, json_result);
-                result = buf.str();
-            }
-            else
-            {
-                result = json_result;
-            }
+            const auto status = ((*osrm).*(service))(*params, result);
+            ParseResult(status, result);
         }
         catch (const std::exception &e)
         {
@@ -186,85 +167,18 @@ inline void async(const Nan::FunctionCallbackInfo<v8::Value> &info,
         std::shared_ptr<osrm::OSRM> osrm;
         ServiceMemFn service;
         const ParamPtr params;
-        const PluginParameters pluginParams;
+
+        // All services return json::Object .. except for Tile!
+        using ObjectOrString =
+            typename std::conditional<std::is_same<ParamPtr, tile_parameters_ptr>::value,
+                                      std::string,
+                                      osrm::json::Object>::type;
 
         ObjectOrString result;
     };
 
     auto *callback = new Nan::Callback{info[info.Length() - 1].As<v8::Function>()};
-    Nan::AsyncQueueWorker(
-        new Worker{self->this_, std::move(params), service, callback, std::move(pluginParams)});
-}
-
-template <typename ParameterParser, typename ServiceMemFn>
-inline void asyncForTiles(const Nan::FunctionCallbackInfo<v8::Value> &info,
-                          ParameterParser argsToParams,
-                          ServiceMemFn service,
-                          bool requires_multiple_coordinates)
-{
-    auto params = argsToParams(info, requires_multiple_coordinates);
-    if (!params)
-        return;
-
-    auto pluginParams = argumentsToPluginParameters(info);
-
-    BOOST_ASSERT(params->IsValid());
-
-    if (!info[info.Length() - 1]->IsFunction())
-        return Nan::ThrowTypeError("last argument must be a callback function");
-
-    auto *const self = Nan::ObjectWrap::Unwrap<Engine>(info.Holder());
-    using ParamPtr = decltype(params);
-
-    struct Worker final : Nan::AsyncWorker
-    {
-        using Base = Nan::AsyncWorker;
-
-        Worker(std::shared_ptr<osrm::OSRM> osrm_,
-               ParamPtr params_,
-               ServiceMemFn service,
-               Nan::Callback *callback,
-               PluginParameters pluginParams_)
-            : Base(callback), osrm{std::move(osrm_)}, service{std::move(service)},
-              params{std::move(params_)}, pluginParams{std::move(pluginParams_)}
-        {
-        }
-
-        void Execute() override try
-        {
-            result = std::string();
-            const auto status = ((*osrm).*(service))(*params, result);
-            auto str_result = result.get<std::string>();
-            ParseResult(status, str_result);
-        }
-        catch (const std::exception &e)
-        {
-            SetErrorMessage(e.what());
-        }
-
-        void HandleOKCallback() override
-        {
-            Nan::HandleScope scope;
-
-            const constexpr auto argc = 2u;
-            auto str_result = result.get<std::string>();
-            v8::Local<v8::Value> argv[argc] = {Nan::Null(), render(str_result)};
-
-            callback->Call(argc, argv);
-        }
-
-        // Keeps the OSRM object alive even after shutdown until we're done with callback
-        std::shared_ptr<osrm::OSRM> osrm;
-        ServiceMemFn service;
-        const ParamPtr params;
-        const PluginParameters pluginParams;
-
-        osrm::engine::api::ResultT result;
-    };
-
-    auto *callback = new Nan::Callback{info[info.Length() - 1].As<v8::Function>()};
-    Nan::AsyncQueueWorker(
-        new Worker{self->this_, std::move(params), service, callback, std::move(pluginParams)});
+    Nan::AsyncQueueWorker(new Worker{self->this_, std::move(params), service, callback});
 }
 
 // clang-format off
@@ -368,7 +282,7 @@ NAN_METHOD(Engine::nearest) //
 
  * @param {Function} callback
  *
- * @returns {Object} containing `durations`, `distances`, `sources`, and `destinations`.
+ * @returns {Object} containing `durations`, `sources`, and `destinations`.
  * **`durations`**: array of arrays that stores the matrix in row-major order. `durations[i][j]` gives the travel time from the i-th waypoint to the j-th waypoint.
  *                  Values are given in seconds.
  * **`distances`**: array of arrays that stores the matrix in row-major order. `distances[i][j]` gives the travel time from the i-th waypoint to the j-th waypoint.
@@ -427,7 +341,7 @@ NAN_METHOD(Engine::table) //
 // clang-format on
 NAN_METHOD(Engine::tile)
 {
-    asyncForTiles(info, &argumentsToTileParameters, &osrm::OSRM::Tile, {/*unused*/});
+    async(info, &argumentsToTileParameters, &osrm::OSRM::Tile, {/*unused*/});
 }
 
 // clang-format off

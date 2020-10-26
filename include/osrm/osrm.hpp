@@ -28,7 +28,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OSRM_HPP
 #define OSRM_HPP
 
-#include "engine/api/base_result.hpp"
 #include "osrm/osrm_fwd.hpp"
 #include "osrm/status.hpp"
 
@@ -84,7 +83,7 @@ class OSRM final
      * \return Status indicating success for the query or failure
      * \see Status, RouteParameters and json::Object
      */
-    Status Route(const RouteParameters &parameters, osrm::engine::api::ResultT &result) const;
+    Status Route(const RouteParameters &parameters, json::Object &result) const;
 
     /**
      * Distance tables for coordinates.
@@ -93,7 +92,7 @@ class OSRM final
      * \return Status indicating success for the query or failure
      * \see Status, TableParameters and json::Object
      */
-    Status Table(const TableParameters &parameters, osrm::engine::api::ResultT &result) const;
+    Status Table(const TableParameters &parameters, json::Object &result) const;
 
     /**
      * Nearest street segment for coordinate.
@@ -102,7 +101,7 @@ class OSRM final
      * \return Status indicating success for the query or failure
      * \see Status, NearestParameters and json::Object
      */
-    Status Nearest(const NearestParameters &parameters, osrm::engine::api::ResultT &result) const;
+    Status Nearest(const NearestParameters &parameters, json::Object &result) const;
 
     /**
      * Trip: shortest round trip between coordinates.
@@ -111,7 +110,7 @@ class OSRM final
      * \return Status indicating success for the query or failure
      * \see Status, TripParameters and json::Object
      */
-    Status Trip(const TripParameters &parameters, osrm::engine::api::ResultT &result) const;
+    Status Trip(const TripParameters &parameters, json::Object &result) const;
 
     /**
      * Match: snaps noisy coordinate traces to the road network
@@ -120,7 +119,7 @@ class OSRM final
      * \return Status indicating success for the query or failure
      * \see Status, MatchParameters and json::Object
      */
-    Status Match(const MatchParameters &parameters, osrm::engine::api::ResultT &result) const;
+    Status Match(const MatchParameters &parameters, json::Object &result) const;
 
     /**
      * Tile: vector tiles with internal graph representation
@@ -129,7 +128,7 @@ class OSRM final
      * \return Status indicating success for the query or failure
      * \see Status, TileParameters and json::Object
      */
-    Status Tile(const TileParameters &parameters, osrm::engine::api::ResultT &result) const;
+    Status Tile(const TileParameters &parameters, std::string &result) const;
 
   private:
     std::unique_ptr<engine::EngineInterface> engine_;

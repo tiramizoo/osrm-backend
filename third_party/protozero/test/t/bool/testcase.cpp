@@ -1,9 +1,8 @@
 
 #include <testcase.hpp>
-
 #include "testcase.pb.h"
 
-int main() {
+int main(int c, char *argv[]) {
     TestBoolean::Test msg;
 
     msg.set_b(0);

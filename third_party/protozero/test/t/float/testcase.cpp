@@ -1,9 +1,8 @@
 
 #include <testcase.hpp>
-
 #include "testcase.pb.h"
 
-int main() {
+int main(int c, char *argv[]) {
     TestFloat::Test msg;
 
     msg.set_x(0.0);

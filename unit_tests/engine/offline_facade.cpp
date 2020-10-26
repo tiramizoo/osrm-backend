@@ -229,8 +229,7 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
                                const float /*max_distance*/,
                                const int /*bearing*/,
                                const int /*bearing_range*/,
-                               const Approach /*approach*/,
-                               const bool /*use_all_edges*/) const override
+                               const Approach /*approach*/) const override
     {
         return {};
     }
@@ -238,8 +237,7 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
     std::vector<PhantomNodeWithDistance>
     NearestPhantomNodesInRange(const util::Coordinate /*input_coordinate*/,
                                const float /*max_distance*/,
-                               const Approach /*approach*/,
-                               const bool /*use_all_edges*/) const override
+                               const Approach /*approach*/) const override
     {
         return {};
     }
@@ -284,8 +282,7 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
 
     std::pair<PhantomNode, PhantomNode>
     NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
-                                                      const Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+                                                      const Approach /*approach*/) const override
     {
         return {};
     }
@@ -293,8 +290,7 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
     std::pair<PhantomNode, PhantomNode>
     NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
                                                       const double /*max_distance*/,
-                                                      const Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+                                                      const Approach /*approach*/) const override
     {
         return {};
     }
@@ -304,8 +300,7 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
                                                       const double /*max_distance*/,
                                                       const int /*bearing*/,
                                                       const int /*bearing_range*/,
-                                                      const Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+                                                      const Approach /*approach*/) const override
     {
         return {};
     }
@@ -314,8 +309,7 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
     NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
                                                       const int /*bearing*/,
                                                       const int /*bearing_range*/,
-                                                      const Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+                                                      const Approach /*approach*/) const override
     {
         return {};
     }
@@ -345,7 +339,6 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
     StringView GetDestinationsForID(const NameID /*id*/) const override { return StringView{}; }
     StringView GetExitsForID(const NameID /*id*/) const override { return StringView{}; }
     bool GetContinueStraightDefault() const override { return false; }
-    std::string GetTimestamp() const override { return ""; }
     double GetMapMatchingMaxSpeed() const override { return 0; }
     const char *GetWeightName() const override { return ""; }
     unsigned GetWeightPrecision() const override { return 0; }

@@ -3,6 +3,7 @@
 #include "../common/range_tools.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/test/test_case_template.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <fstream>

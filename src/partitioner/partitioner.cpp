@@ -28,11 +28,7 @@
 #include <boost/assert.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#if TBB_VERSION_MAJOR == 2020
-#include <tbb/global_control.h>
-#else
 #include <tbb/task_scheduler_init.h>
-#endif
 
 #include "util/geojson_debug_logger.hpp"
 #include "util/geojson_debug_policies.hpp"
@@ -74,13 +70,8 @@ auto getGraphBisection(const PartitionerConfig &config)
 
 int Partitioner::Run(const PartitionerConfig &config)
 {
-#if TBB_VERSION_MAJOR == 2020
-    tbb::global_control gc(tbb::global_control::max_allowed_parallelism,
-                           config.requested_num_threads);
-#else
     tbb::task_scheduler_init init(config.requested_num_threads);
     BOOST_ASSERT(init.is_active());
-#endif
 
     const std::vector<BisectionID> &node_based_partition_ids = getGraphBisection(config);
 
@@ -156,15 +147,12 @@ int Partitioner::Run(const PartitionerConfig &config)
     {
         std::vector<EdgeWeight> node_weights;
         std::vector<EdgeDuration> node_durations;
-        std::vector<EdgeDuration> node_distances;
         extractor::files::readEdgeBasedNodeWeightsDurations(
             config.GetPath(".osrm.enw"), node_weights, node_durations);
-        extractor::files::readEdgeBasedNodeDistances(config.GetPath(".osrm.enw"), node_distances);
         util::inplacePermutation(node_weights.begin(), node_weights.end(), permutation);
         util::inplacePermutation(node_durations.begin(), node_durations.end(), permutation);
-        util::inplacePermutation(node_distances.begin(), node_distances.end(), permutation);
-        extractor::files::writeEdgeBasedNodeWeightsDurationsDistances(
-            config.GetPath(".osrm.enw"), node_weights, node_durations, node_distances);
+        extractor::files::writeEdgeBasedNodeWeightsDurations(
+            config.GetPath(".osrm.enw"), node_weights, node_durations);
     }
     {
         const auto &filename = config.GetPath(".osrm.maneuver_overrides");

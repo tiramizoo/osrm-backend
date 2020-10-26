@@ -1,9 +1,8 @@
 
 #include <testcase.hpp>
-
 #include "testcase.pb.h"
 
-int main() {
+int main(int c, char *argv[]) {
     TestInt64::Test msg;
 
     msg.set_i(0);

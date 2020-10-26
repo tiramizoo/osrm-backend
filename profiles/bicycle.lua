@@ -7,7 +7,6 @@ Sequence = require('lib/sequence')
 Handlers = require("lib/way_handlers")
 find_access_tag = require("lib/access").find_access_tag
 limit = require("lib/maxspeed").limit
-Measure = require("lib/measure")
 
 function setup()
   local default_speed = 15
@@ -39,10 +38,20 @@ function setup()
       mode.pushing_bike
     },
 
-    barrier_blacklist = Set {
-      'yes',
-      'wall',
-      'fence'
+    barrier_whitelist = Set {
+      'sump_buster',
+      'bus_trap',
+      'cycle_barrier',
+      'bollard',
+      'entrance',
+      'cattle_grid',
+      'border_control',
+      'toll_booth',
+      'sally_port',
+      'gate',
+      'lift_gate',
+      'no',
+      'block'
     },
 
     access_tag_whitelist = Set {
@@ -56,13 +65,7 @@ function setup()
       'private',
       'agricultural',
       'forestry',
-      'delivery',
-      -- When a way is tagged with `use_sidepath` a parallel way suitable for
-      -- cyclists is mapped and must be used instead (by law). This tag is
-      -- used on ways that normally may be used by cyclists, but not when
-      -- a signposted parallel cycleway is available. For purposes of routing
-      -- cyclists, this value should be treated as 'no access for bicycles'.
-      'use_sidepath'
+      'delivery'
     },
 
     restricted_access_tag_list = Set { },
@@ -213,6 +216,20 @@ function setup()
   }
 end
 
+local function parse_maxspeed(source)
+    if not source then
+        return 0
+    end
+    local n = tonumber(source:match("%d*"))
+    if not n then
+        n = 0
+    end
+    if string.match(source, "mph") or string.match(source, "mp/h") then
+        n = (n*1609)/1000
+    end
+    return n
+end
+
 function process_node(profile, node, result)
   -- parse access and barrier tags
   local highway = node:get_value_by_key("highway")
@@ -228,7 +245,7 @@ function process_node(profile, node, result)
   else
     local barrier = node:get_value_by_key("barrier")
     if barrier and "" ~= barrier then
-      if profile.barrier_blacklist[barrier] then
+      if not profile.barrier_whitelist[barrier] then
         result.barrier = true
       end
     end
@@ -269,9 +286,9 @@ function handle_bicycle_tags(profile,way,result,data)
 
   -- other tags
   data.junction = way:get_value_by_key("junction")
-  data.maxspeed = Measure.get_max_speed(way:get_value_by_key ("maxspeed")) or 0
-  data.maxspeed_forward = Measure.get_max_speed(way:get_value_by_key("maxspeed:forward")) or 0
-  data.maxspeed_backward = Measure.get_max_speed(way:get_value_by_key("maxspeed:backward")) or 0
+  data.maxspeed = parse_maxspeed(way:get_value_by_key ( "maxspeed") )
+  data.maxspeed_forward = parse_maxspeed(way:get_value_by_key( "maxspeed:forward"))
+  data.maxspeed_backward = parse_maxspeed(way:get_value_by_key( "maxspeed:backward"))
   data.barrier = way:get_value_by_key("barrier")
   data.oneway = way:get_value_by_key("oneway")
   data.oneway_bicycle = way:get_value_by_key("oneway:bicycle")

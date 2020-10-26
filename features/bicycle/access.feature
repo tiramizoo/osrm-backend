@@ -127,7 +127,6 @@ Feature: Bike - Access tags on ways
             |              |              | agricultural |         |
             |              |              | forestry     |         |
             |              |              | delivery     |         |
-            |              |              | use_sidepath |         |
 
     Scenario: Bike - Access tags on both node and way
         Then routability should be

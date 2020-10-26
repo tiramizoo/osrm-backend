@@ -1,7 +1,5 @@
 
-#include <algorithm>
 #include <cstdint>
-#include <iterator>
 #include <string>
 #include <vector>
 
@@ -19,7 +17,9 @@ inline std::vector<uint32_t> read_data(const std::string& data) {
         switch (message.tag_and_type()) {
             case tag_and_type(ExampleMsg::repeated_uint32_x, protozero::pbf_wire_type::length_delimited): {
                     const auto xit = message.get_packed_uint32();
-                    std::copy(xit.cbegin(), xit.cend(), std::back_inserter(values));
+                    for (const auto value : xit) {
+                        values.push_back(value);
+                    }
                 }
                 break;
             case tag_and_type(ExampleMsg::repeated_uint32_x, protozero::pbf_wire_type::varint): {
@@ -28,7 +28,7 @@ inline std::vector<uint32_t> read_data(const std::string& data) {
                 }
                 break;
             default:
-                REQUIRE(false); // should never be here
+                message.skip();
         }
     }
 
@@ -41,7 +41,9 @@ inline std::vector<uint32_t> read_data_packed(const std::string& data) {
     protozero::pbf_message<ExampleMsg> message{data};
     while (message.next(ExampleMsg::repeated_uint32_x, protozero::pbf_wire_type::length_delimited)) {
         const auto xit = message.get_packed_uint32();
-        std::copy(xit.cbegin(), xit.cend(), std::back_inserter(values));
+        for (const auto value : xit) {
+            values.push_back(value);
+        }
     }
 
     return values;

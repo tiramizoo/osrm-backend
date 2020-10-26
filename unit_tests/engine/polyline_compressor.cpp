@@ -1,6 +1,7 @@
 #include "engine/polyline_compressor.hpp"
 #include "util/coordinate.hpp"
 
+#include <boost/test/test_case_template.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <string>

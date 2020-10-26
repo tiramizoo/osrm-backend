@@ -3,9 +3,6 @@
 
 #include <catch.hpp>
 
-#include <array>
-#include <vector>
-
 #include <stdexcept>
 // Define protozero_assert() to throw this error. This allows the tests to
 // check that the assert fails.

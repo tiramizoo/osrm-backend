@@ -7,6 +7,8 @@
 #include "util/timing_util.hpp"
 #include "util/version.hpp"
 
+#include <tbb/task_scheduler_init.h>
+
 #include <boost/algorithm/string/join.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
@@ -15,7 +17,6 @@
 #include <iostream>
 #include <iterator>
 #include <regex>
-#include <thread>
 
 using namespace osrm;
 
@@ -85,7 +86,7 @@ return_code parseArguments(int argc,
         //
         ("threads,t",
          boost::program_options::value<unsigned int>(&config.requested_num_threads)
-             ->default_value(std::thread::hardware_concurrency()),
+             ->default_value(tbb::task_scheduler_init::default_num_threads()),
          "Number of threads to use")
         //
         ("balance",

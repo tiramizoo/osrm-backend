@@ -21,11 +21,7 @@
 
 #include <boost/assert.hpp>
 
-#if TBB_VERSION_MAJOR == 2020
-#include <tbb/global_control.h>
-#else
 #include <tbb/task_scheduler_init.h>
-#endif
 
 namespace osrm
 {
@@ -80,7 +76,6 @@ auto LoadAndUpdateEdgeExpandedGraph(const CustomizationConfig &config,
                                     const partitioner::MultiLevelPartition &mlp,
                                     std::vector<EdgeWeight> &node_weights,
                                     std::vector<EdgeDuration> &node_durations,
-                                    std::vector<EdgeDistance> &node_distances,
                                     std::uint32_t &connectivity_checksum)
 {
     updater::Updater updater(config.updater_config);
@@ -88,8 +83,6 @@ auto LoadAndUpdateEdgeExpandedGraph(const CustomizationConfig &config,
     std::vector<extractor::EdgeBasedEdge> edge_based_edge_list;
     EdgeID num_nodes = updater.LoadAndUpdateEdgeExpandedGraph(
         edge_based_edge_list, node_weights, node_durations, connectivity_checksum);
-
-    extractor::files::readEdgeBasedNodeDistances(config.GetPath(".osrm.enw"), node_distances);
 
     auto directed = partitioner::splitBidirectionalEdges(edge_based_edge_list);
 
@@ -122,13 +115,8 @@ std::vector<CellMetric> customizeFilteredMetrics(const partitioner::MultiLevelEd
 
 int Customizer::Run(const CustomizationConfig &config)
 {
-#if TBB_VERSION_MAJOR == 2020
-    tbb::global_control gc(tbb::global_control::max_allowed_parallelism,
-                           config.requested_num_threads);
-#else
     tbb::task_scheduler_init init(config.requested_num_threads);
     BOOST_ASSERT(init.is_active());
-#endif
 
     TIMER_START(loading_data);
 
@@ -136,11 +124,10 @@ int Customizer::Run(const CustomizationConfig &config)
     partitioner::files::readPartition(config.GetPath(".osrm.partition"), mlp);
 
     std::vector<EdgeWeight> node_weights;
-    std::vector<EdgeDuration> node_durations; // TODO: remove when durations are optional
-    std::vector<EdgeDistance> node_distances; // TODO: remove when distances are optional
+    std::vector<EdgeDuration> node_durations; // TODO: to be removed later
     std::uint32_t connectivity_checksum = 0;
     auto graph = LoadAndUpdateEdgeExpandedGraph(
-        config, mlp, node_weights, node_durations, node_distances, connectivity_checksum);
+        config, mlp, node_weights, node_durations, connectivity_checksum);
     BOOST_ASSERT(graph.GetNumberOfNodes() == node_weights.size());
     std::for_each(node_weights.begin(), node_weights.end(), [](auto &w) { w &= 0x7fffffff; });
     util::Log() << "Loaded edge based graph: " << graph.GetNumberOfEdges() << " edges, "
@@ -179,10 +166,8 @@ int Customizer::Run(const CustomizationConfig &config)
     util::Log() << "MLD customization writing took " << TIMER_SEC(writing_mld_data) << " seconds";
 
     TIMER_START(writing_graph);
-    MultiLevelEdgeBasedGraph shaved_graph{std::move(graph),
-                                          std::move(node_weights),
-                                          std::move(node_durations),
-                                          std::move(node_distances)};
+    MultiLevelEdgeBasedGraph shaved_graph{
+        std::move(graph), std::move(node_weights), std::move(node_durations)};
     customizer::files::writeGraph(
         config.GetPath(".osrm.mldgr"), shaved_graph, connectivity_checksum);
     TIMER_STOP(writing_graph);

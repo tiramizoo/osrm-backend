@@ -7,6 +7,7 @@
 
 #include "../unit_tests/mocks/mock_scripting_environment.hpp"
 
+#include <boost/test/test_case_template.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <iostream>
@@ -30,7 +31,6 @@ inline InputEdge MakeUnitEdge(const NodeID from, const NodeID to)
             to,                            // target
             1,                             // weight
             1,                             // duration
-            1,                             // distance
             GeometryID{0, false},          // geometry_id
             false,                         // reversed
             NodeBasedEdgeClassification(), // default flags

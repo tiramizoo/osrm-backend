@@ -20,7 +20,6 @@ template <storage::Ownership Ownership> struct CellMetricImpl
 
     Vector<EdgeWeight> weights;
     Vector<EdgeDuration> durations;
-    Vector<EdgeDistance> distances;
 };
 }
 

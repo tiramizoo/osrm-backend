@@ -58,7 +58,6 @@ struct StorageConfig final : IOConfig
                     ".osrm.turn_duration_penalties",
                     ".osrm.datasource_names",
                     ".osrm.names",
-                    ".osrm.timestamp",
                     ".osrm.properties",
                     ".osrm.icd",
                     ".osrm.maneuver_overrides"},

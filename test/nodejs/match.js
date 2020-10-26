@@ -25,28 +25,6 @@ test('match: match in Monaco', function(assert) {
     });
 });
 
-test('match: match in Monaco returning a buffer', function(assert) {
-    assert.plan(6);
-    var osrm = new OSRM(data_path);
-    var options = {
-        coordinates: three_test_coordinates,
-        timestamps: [1424684612, 1424684616, 1424684620]
-    };
-    osrm.match(options, { format: 'json_buffer' }, function(err, response) {
-        assert.ifError(err);
-        assert.ok(response instanceof Buffer);
-        response = JSON.parse(response);
-        assert.equal(response.matchings.length, 1);
-        assert.ok(response.matchings.every(function(m) {
-            return !!m.distance && !!m.duration && Array.isArray(m.legs) && !!m.geometry && m.confidence > 0;
-        }))
-        assert.equal(response.tracepoints.length, 3);
-        assert.ok(response.tracepoints.every(function(t) {
-            return !!t.hint && !isNaN(t.matchings_index) && !isNaN(t.waypoint_index) && !!t.name;
-        }));
-    });
-});
-
 test('match: match in Monaco without timestamps', function(assert) {
     assert.plan(3);
     var osrm = new OSRM(data_path);
@@ -247,16 +225,6 @@ test('match: throws on invalid tidy param', function(assert) {
         /tidy must be of type Boolean/);
 });
 
-test('match: throws on invalid config param', function(assert) {
-    assert.plan(1);
-    var osrm = new OSRM({path: mld_data_path, algorithm: 'MLD'});
-    var options = {
-        coordinates: three_test_coordinates,
-    };
-    assert.throws(function() { osrm.match(options, { format: 'invalid' }, function(err, response) {}) },
-        /format must be a string:/);
-});
-
 test('match: match in Monaco without motorways', function(assert) {
     assert.plan(3);
     var osrm = new OSRM({path: mld_data_path, algorithm: 'MLD'});
@@ -317,30 +285,6 @@ test('match: throws on invalid waypoints values, waypoints must correspond with 
     };
     assert.throws(function() { osrm.match(options, function(err, response) {console.log(err);}); },
         'Waypoints must correspond with the index of an input coordinate');
-});
-
-test('match: throws on invalid waypoints values, waypoints must be an array', function (assert) {
-    assert.plan(1);
-    var osrm = new OSRM(data_path);
-    var options = {
-        steps: true,
-        coordinates: three_test_coordinates,
-        waypoints: "string"
-    };
-    assert.throws(function () { osrm.match(options, function (err, response) { console.log(err); }); },
-        'Waypoints must be an array of integers corresponding to the input coordinates.');
-});
-
-test('match: throws on invalid waypoints values, waypoints must be an array of integers', function (assert) {
-    assert.plan(1);
-    var osrm = new OSRM(data_path);
-    var options = {
-        steps: true,
-        coordinates: three_test_coordinates,
-        waypoints: [0,1,"string"]
-    };
-    assert.throws(function () { osrm.match(options, function (err, response) { console.log(err); }); },
-        'Waypoint values must be an array of integers');
 });
 
 test('match: error on split trace', function(assert) {

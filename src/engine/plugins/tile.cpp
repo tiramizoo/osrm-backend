@@ -294,7 +294,6 @@ struct SpeedLayer : public vtzero::layer_builder
     vtzero::index_value key_duration;
     vtzero::index_value key_name;
     vtzero::index_value key_rate;
-    vtzero::index_value key_is_startpoint;
 
     SpeedLayer(vtzero::tile_builder &tile)
         : layer_builder(tile, "speeds"), uint_index(*this), double_index(*this),
@@ -303,8 +302,7 @@ struct SpeedLayer : public vtzero::layer_builder
           key_datasource(add_key_without_dup_check("datasource")),
           key_weight(add_key_without_dup_check("weight")),
           key_duration(add_key_without_dup_check("duration")),
-          key_name(add_key_without_dup_check("name")), key_rate(add_key_without_dup_check("rate")),
-          key_is_startpoint(add_key_without_dup_check("is_startpoint"))
+          key_name(add_key_without_dup_check("name")), key_rate(add_key_without_dup_check("rate"))
     {
     }
 
@@ -350,11 +348,6 @@ class SpeedLayerFeatureBuilder : public vtzero::linestring_feature_builder
     }
 
     void set_rate(double value) { add_property(m_layer.key_rate, m_layer.double_index(value)); }
-
-    void set_is_startpoint(bool value)
-    {
-        add_property(m_layer.key_is_startpoint, m_layer.bool_index(value));
-    }
 
 }; // class SpeedLayerFeatureBuilder
 
@@ -492,8 +485,6 @@ void encodeVectorTile(const DataFacadeBase &facade,
                     const auto reverse_datasource_idx = reverse_datasource_range(
                         reverse_datasource_range.size() - edge.fwd_segment_position - 1);
 
-                    const auto is_startpoint = edge.is_startpoint;
-
                     const auto component_id = facade.GetComponentID(edge.forward_segment_id.id);
                     const auto name_id = facade.GetNameIndex(edge.forward_segment_id.id);
                     auto name = facade.GetNameForID(name_id);
@@ -525,7 +516,6 @@ void encodeVectorTile(const DataFacadeBase &facade,
                             fbuilder.set_duration(forward_duration / 10.0);
                             fbuilder.set_name(name);
                             fbuilder.set_rate(forward_rate / 10.0);
-                            fbuilder.set_is_startpoint(is_startpoint);
 
                             fbuilder.commit();
                         }
@@ -559,7 +549,6 @@ void encodeVectorTile(const DataFacadeBase &facade,
                             fbuilder.set_duration(reverse_duration / 10.0);
                             fbuilder.set_name(name);
                             fbuilder.set_rate(reverse_rate / 10.0);
-                            fbuilder.set_is_startpoint(is_startpoint);
 
                             fbuilder.commit();
                         }
@@ -665,11 +654,10 @@ void encodeVectorTile(const DataFacadeBase &facade,
 
 Status TilePlugin::HandleRequest(const RoutingAlgorithmsInterface &algorithms,
                                  const api::TileParameters &parameters,
-                                 osrm::engine::api::ResultT &result) const
+                                 std::string &pbf_buffer) const
 {
     BOOST_ASSERT(parameters.IsValid());
 
-    auto &pbf_buffer = result.get<std::string>();
     const auto &facade = algorithms.GetFacade();
     auto edges = getEdges(facade, parameters.x, parameters.y, parameters.z);
     auto segregated_nodes = getSegregatedNodes(facade, edges);

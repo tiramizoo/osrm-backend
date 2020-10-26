@@ -1,9 +1,8 @@
 
 #include <testcase.hpp>
-
 #include "testcase.pb.h"
 
-int main() {
+int main(int c, char *argv[]) {
     TestString::Test msg;
 
     msg.set_s("");

@@ -1,22 +1,21 @@
 
 #include <string>
 
-#include <buffer.hpp>
+#include <test.hpp> // IWYU pragma: keep
 
 #include "t/bool/bool_testcase.pb.h"
 
-TEMPLATE_TEST_CASE("write bool field and check with libprotobuf", "",
-    buffer_test_string, buffer_test_vector, buffer_test_array, buffer_test_external) {
+TEST_CASE("write bool field and check with libprotobuf") {
 
-    TestType buffer;
-    typename TestType::writer_type pw{buffer.buffer()};
+    std::string buffer;
+    protozero::pbf_writer pw{buffer};
 
     TestBoolean::Test msg;
 
     SECTION("false") {
         pw.add_bool(1, false);
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE_FALSE(msg.b());
     }
@@ -24,7 +23,7 @@ TEMPLATE_TEST_CASE("write bool field and check with libprotobuf", "",
     SECTION("true") {
         pw.add_bool(1, true);
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE(msg.b());
     }

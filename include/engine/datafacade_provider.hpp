@@ -32,8 +32,9 @@ class ExternalProvider final : public DataFacadeProvider<AlgorithmT, FacadeT>
   public:
     using Facade = typename DataFacadeProvider<AlgorithmT, FacadeT>::Facade;
 
-    ExternalProvider(const storage::StorageConfig &config)
-        : facade_factory(std::make_shared<datafacade::MMapMemoryAllocator>(config))
+    ExternalProvider(const storage::StorageConfig &config,
+                     const boost::filesystem::path &memory_file)
+        : facade_factory(std::make_shared<datafacade::MMapMemoryAllocator>(config, memory_file))
     {
     }
 

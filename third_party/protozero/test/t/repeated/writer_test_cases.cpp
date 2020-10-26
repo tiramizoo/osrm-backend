@@ -1,20 +1,19 @@
 
-#include <buffer.hpp>
+#include <test.hpp>
 
 #include "t/repeated/repeated_testcase.pb.h"
 
-TEMPLATE_TEST_CASE("write repeated fields and check with libprotobuf", "",
-    buffer_test_string, buffer_test_vector, buffer_test_array, buffer_test_external) {
+TEST_CASE("write repeated fields and check with libprotobuf") {
 
-    TestType buffer;
-    typename TestType::writer_type pw{buffer.buffer()};
+    std::string buffer;
+    protozero::pbf_writer pw{buffer};
 
     TestRepeated::Test msg;
 
     SECTION("one") {
         pw.add_int32(1, 0L);
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE(msg.i().size() == 1);
         REQUIRE(msg.i(0) == 0L);
@@ -27,7 +26,7 @@ TEMPLATE_TEST_CASE("write repeated fields and check with libprotobuf", "",
         pw.add_int32(1, std::numeric_limits<int32_t>::max());
         pw.add_int32(1, std::numeric_limits<int32_t>::min());
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE(msg.i().size() == 5);
         REQUIRE(msg.i(0) == 0L);

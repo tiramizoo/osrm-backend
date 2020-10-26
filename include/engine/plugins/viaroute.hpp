@@ -33,7 +33,7 @@ class ViaRoutePlugin final : public BasePlugin
 
     Status HandleRequest(const RoutingAlgorithmsInterface &algorithms,
                          const api::RouteParameters &route_parameters,
-                         osrm::engine::api::ResultT &json_result) const;
+                         util::json::Object &json_result) const;
 };
 }
 }

@@ -13,11 +13,12 @@ notifications:
 branches:
   only:
     - master
+    - "5.18"
     # enable building tags
     - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 cache:
-  npm: true
+  yarn: true
   ccache: true
   apt: true
   directories:
@@ -34,11 +35,7 @@ env:
    - CMAKE_VERSION=3.7.2
    - MASON="$(pwd)/scripts/mason.sh"
    - ENABLE_NODE_BINDINGS=On
-   - NODE="10"
-
-stages:
-  - core
-  - optional
+   - NODE="4"
 
 matrix:
   fast_finish: true
@@ -47,19 +44,18 @@ matrix:
   include:
 
     # Debug Builds
-    - stage: core
-      os: linux
+    - os: linux
       compiler: "format-taginfo-docs"
-      env: NODE=10
+      env: NODE=6
       sudo: false
       before_install:
       install:
-        - curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
         - source $NVM_DIR/nvm.sh
         - nvm install $NODE
         - nvm use $NODE
         - npm --version
-        - npm ci --ignore-scripts
+        - npm install --ignore-scripts
+        - npm link --ignore-scripts
       script:
         - ./scripts/check_taginfo.py taginfo.json profiles/car.lua
         - ${MASON} install clang-format 3.8.1
@@ -122,22 +118,6 @@ matrix:
       env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON RUN_CLANG_FORMAT=ON ENABLE_LTO=ON
 
     - os: linux
-      compiler: "gcc-9-release"
-      addons: &gcc9
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-9', 'libbz2-dev', 'libxml2-dev', 'libzip-dev', 'liblua5.2-dev', 'libtbb-dev', 'libboost-all-dev']
-      env: CCOMPILER='gcc-9' CXXCOMPILER='g++-9' BUILD_TYPE='Release' CXXFLAGS='-Wno-cast-function-type'
-
-    - os: linux
-      compiler: "gcc-8-release"
-      addons: &gcc8
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-8', 'libbz2-dev', 'libxml2-dev', 'libzip-dev', 'liblua5.2-dev', 'libtbb-dev', 'libboost-all-dev']
-      env: CCOMPILER='gcc-8' CXXCOMPILER='g++-8' BUILD_TYPE='Release' CXXFLAGS='-Wno-cast-function-type'
-
-    - os: linux
       compiler: "gcc-7-release"
       addons: &gcc7
         apt:
@@ -150,6 +130,14 @@ matrix:
       env: >
         TARGET_ARCH='i686' CCOMPILER='gcc-7' CXXCOMPILER='g++-7' BUILD_TYPE='Release'
         CFLAGS='-m32 -msse2 -mfpmath=sse' CXXFLAGS='-m32 -msse2 -mfpmath=sse'
+
+    - os: linux
+      compiler: "gcc-7-stxxl"
+      addons: &gcc7
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['g++-7', 'libbz2-dev', 'libstxxl-dev', 'libxml2-dev', 'libzip-dev', 'liblua5.2-dev', 'libtbb-dev', 'libboost-all-dev']
+      env: CCOMPILER='gcc-7' CXXCOMPILER='g++-7' BUILD_TYPE='Release' ENABLE_STXXL=On
 
     - os: linux
       compiler: "gcc-5-release"
@@ -169,17 +157,17 @@ matrix:
 
     - os: osx
       osx_image: xcode9.2
-      compiler: "mason-osx-release-node-10"
+      compiler: "mason-osx-release-node-8"
       # we use the xcode provides clang and don't install our own
-      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="10"
+      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="8"
       after_success:
         - ./scripts/travis/publish.sh
 
     - os: osx
       osx_image: xcode9.2
-      compiler: "mason-osx-release-node-8"
+      compiler: "mason-osx-release-node-4"
       # we use the xcode provides clang and don't install our own
-      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="8"
+      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="4"
       after_success:
         - ./scripts/travis/publish.sh
 
@@ -193,6 +181,54 @@ matrix:
       env: CCOMPILER='gcc-7' CXXCOMPILER='g++-7' BUILD_TYPE='Release' BUILD_SHARED_LIBS=ON
 
     # Node build jobs. These skip running the tests.
+    - os: linux
+      sudo: false
+      compiler: "node-4-mason-linux-release"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['libstdc++-4.9-dev']
+      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="4"
+      install:
+        - pushd ${OSRM_BUILD_DIR}
+        - |
+          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
+              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
+              -DENABLE_CCACHE=ON \
+              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
+              -DENABLE_GLIBC_WORKAROUND=ON
+        - make --jobs=${JOBS}
+        - popd
+      script:
+        - npm run nodejs-tests
+      after_success:
+        - ./scripts/travis/publish.sh
+
+    - os: linux
+      sudo: false
+      compiler: "node-4-mason-linux-debug"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['libstdc++-4.9-dev']
+      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Debug' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="4"
+      install:
+        - pushd ${OSRM_BUILD_DIR}
+        - |
+          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
+              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
+              -DENABLE_CCACHE=ON \
+              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
+              -DENABLE_GLIBC_WORKAROUND=ON
+        - make --jobs=${JOBS}
+        - popd
+      script:
+        - npm run nodejs-tests
+      after_success:
+        - ./scripts/travis/publish.sh
+
     - os: linux
       sudo: false
       compiler: "node-8-mason-linux-release"
@@ -241,183 +277,7 @@ matrix:
       after_success:
         - ./scripts/travis/publish.sh
 
-    - os: linux
-      sudo: false
-      compiler: "node-10-mason-linux-release"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['libstdc++-4.9-dev']
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="10"
-      install:
-        - pushd ${OSRM_BUILD_DIR}
-        - |
-          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
-              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
-              -DENABLE_CCACHE=ON \
-              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
-              -DENABLE_GLIBC_WORKAROUND=ON
-        - make --jobs=${JOBS}
-        - popd
-      script:
-        - npm run nodejs-tests
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: linux
-      sudo: false
-      compiler: "node-10-mason-linux-debug"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['libstdc++-4.9-dev']
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Debug' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="10"
-      install:
-        - pushd ${OSRM_BUILD_DIR}
-        - |
-          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
-              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
-              -DENABLE_CCACHE=ON \
-              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
-              -DENABLE_GLIBC_WORKAROUND=ON
-        - make --jobs=${JOBS}
-        - popd
-      script:
-        - npm run nodejs-tests
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: osx
-      stage: optional
-      osx_image: xcode9.2
-      compiler: "mason-osx-release-node-latest"
-      # we use the xcode provides clang and don't install our own
-      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="node"
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: linux
-      sudo: false
-      compiler: "node-latest-mason-linux-release"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['libstdc++-4.9-dev']
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="node"
-      install:
-        - pushd ${OSRM_BUILD_DIR}
-        - |
-          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
-              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
-              -DENABLE_CCACHE=ON \
-              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
-              -DENABLE_GLIBC_WORKAROUND=ON
-        - make --jobs=${JOBS}
-        - popd
-      script:
-        - npm run nodejs-tests
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: linux
-      sudo: false
-      compiler: "node-latest-mason-linux-debug"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['libstdc++-4.9-dev']
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Debug' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="node"
-      install:
-        - pushd ${OSRM_BUILD_DIR}
-        - |
-          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
-              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
-              -DENABLE_CCACHE=ON \
-              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
-              -DENABLE_GLIBC_WORKAROUND=ON
-        - make --jobs=${JOBS}
-        - popd
-      script:
-        - npm run nodejs-tests
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: osx
-      osx_image: xcode9.2
-      compiler: "mason-osx-release-node-lts"
-      # we use the xcode provides clang and don't install our own
-      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="--lts"
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: linux
-      sudo: false
-      compiler: "node-lts-mason-linux-release"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['libstdc++-4.9-dev']
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="--lts"
-      install:
-        - pushd ${OSRM_BUILD_DIR}
-        - |
-          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
-              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
-              -DENABLE_CCACHE=ON \
-              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
-              -DENABLE_GLIBC_WORKAROUND=ON
-        - make --jobs=${JOBS}
-        - popd
-      script:
-        - npm run nodejs-tests
-      after_success:
-        - ./scripts/travis/publish.sh
-
-    - os: linux
-      sudo: false
-      compiler: "node-lts-mason-linux-debug"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['libstdc++-4.9-dev']
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Debug' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="--lts"
-      install:
-        - pushd ${OSRM_BUILD_DIR}
-        - |
-          cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-              -DENABLE_MASON=${ENABLE_MASON:-OFF} \
-              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
-              -DENABLE_CCACHE=ON \
-              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
-              -DENABLE_GLIBC_WORKAROUND=ON
-        - make --jobs=${JOBS}
-        - popd
-      script:
-        - npm run nodejs-tests
-      after_success:
-        - ./scripts/travis/publish.sh
-
-  allow_failures:
-    - compiler: "mason-osx-release-node-latest"
-      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="node"
-    - compiler: "node-latest-mason-linux-release"
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="node"
-    - compiler: "node-latest-mason-linux-debug"
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Debug' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="node"
-    - compiler: "mason-osx-release-node-lts"
-      env: ENABLE_MASON=ON BUILD_TYPE='Release' CUCUMBER_TIMEOUT=60000 CCOMPILER='clang' CXXCOMPILER='clang++' ENABLE_ASSERTIONS=ON ENABLE_LTO=ON NODE="--lts"
-    - compiler: "node-lts-mason-linux-release"
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Release' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="--lts"
-    - compiler: "node-lts-mason-linux-debug"
-      env: CLANG_VERSION='5.0.0' BUILD_TYPE='Debug' ENABLE_MASON=ON ENABLE_LTO=ON JOBS=3 NODE="--lts"
-
 before_install:
-  - curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | bash
   - source $NVM_DIR/nvm.sh
   - nvm install $NODE
   - nvm use $NODE
@@ -435,10 +295,15 @@ before_install:
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       sudo mdutil -i off /
     fi
+  - |
+    if [[ ! -f $(which yarn) ]]; then
+      npm install -g yarn
+    fi
   - export PACKAGE_JSON_VERSION=$(node -e "console.log(require('./package.json').version)")
   - export PUBLISH=$([[ "${TRAVIS_TAG:-}" == "v${PACKAGE_JSON_VERSION}" ]] && echo "On" || echo "Off")
   - echo "Using ${JOBS} jobs"
-  - npm ci --ignore-scripts
+  - yarn install --ignore-scripts
+  - yarn check --ignore-scripts --integrity
     # Bootstrap cmake to be able to run mason
   - CMAKE_URL="https://mason-binaries.s3.amazonaws.com/${TRAVIS_OS_NAME}-x86_64/cmake/${CMAKE_VERSION}.tar.gz"
   - CMAKE_DIR="mason_packages/${TRAVIS_OS_NAME}-x86_64/cmake/${CMAKE_VERSION}"
@@ -475,6 +340,7 @@ install:
              -DENABLE_COVERAGE=${ENABLE_COVERAGE:-OFF} \
              -DENABLE_NODE_BINDINGS=${ENABLE_NODE_BINDINGS:-OFF} \
              -DENABLE_SANITIZER=${ENABLE_SANITIZER:-OFF} \
+             -DENABLE_STXXL=${ENABLE_STXXL:-OFF} \
              -DBUILD_TOOLS=ON \
              -DENABLE_CCACHE=ON \
              -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR} \
@@ -516,4 +382,4 @@ script:
     fi
   - |
   - popd
-  - npm test
+  - yarn test

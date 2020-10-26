@@ -1,8 +1,6 @@
 
 #include <test.hpp>
 
-#include <array>
-
 TEST_CASE("read repeated packed double field") {
     // Run these tests twice, the second time we basically move the data
     // one byte down in the buffer. It doesn't matter how the data or buffer
@@ -84,7 +82,7 @@ TEST_CASE("read repeated packed double field") {
             for (std::string::size_type i = 1; i < abuffer.size() - n; ++i) {
                 protozero::pbf_reader item{abuffer.data() + n, i};
                 REQUIRE(item.next());
-                REQUIRE_THROWS_AS(item.get_packed_double(), protozero::end_of_buffer_exception);
+                REQUIRE_THROWS_AS(item.get_packed_double(), const protozero::end_of_buffer_exception&);
             }
         }
     }
@@ -95,23 +93,21 @@ TEST_CASE("write repeated packed double field") {
     protozero::pbf_writer pw{buffer};
 
     SECTION("empty") {
-        const std::array<double, 1> data = {{ 17.34 }};
+        const double data[] = { 17.34 };
         pw.add_packed_double(1, std::begin(data), std::begin(data) /* !!!! */);
 
         REQUIRE(buffer == load_data("repeated_packed_double/data-empty"));
     }
 
     SECTION("one") {
-        const std::array<double, 1> data = {{ 17.34 }};
+        const double data[] = { 17.34 };
         pw.add_packed_double(1, std::begin(data), std::end(data));
 
         REQUIRE(buffer == load_data("repeated_packed_double/data-one"));
     }
 
     SECTION("many") {
-        const std::array<double, 5> data = {{ 17.34, 0.0, 1.0,
-                                              std::numeric_limits<double>::min(),
-                                              std::numeric_limits<double>::max() }};
+        const double data[] = { 17.34, 0.0, 1.0, std::numeric_limits<double>::min(), std::numeric_limits<double>::max() };
         pw.add_packed_double(1, std::begin(data), std::end(data));
 
         REQUIRE(buffer == load_data("repeated_packed_double/data-many"));

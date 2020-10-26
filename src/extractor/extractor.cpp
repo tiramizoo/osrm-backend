@@ -1,6 +1,5 @@
 #include "extractor/extractor.hpp"
 
-#include "extractor/compressed_edge_container.hpp"
 #include "extractor/compressed_node_based_graph_edge.hpp"
 #include "extractor/edge_based_edge.hpp"
 #include "extractor/extraction_containers.hpp"
@@ -12,30 +11,42 @@
 #include "extractor/maneuver_override_relation_parser.hpp"
 #include "extractor/name_table.hpp"
 #include "extractor/node_based_graph_factory.hpp"
+#include "extractor/raster_source.hpp"
 #include "extractor/restriction_filter.hpp"
-#include "extractor/restriction_index.hpp"
 #include "extractor/restriction_parser.hpp"
 #include "extractor/scripting_environment.hpp"
-#include "extractor/tarjan_scc.hpp"
-#include "extractor/way_restriction_map.hpp"
 
 #include "guidance/files.hpp"
 #include "guidance/guidance_processing.hpp"
 #include "guidance/segregated_intersection_classification.hpp"
 #include "guidance/turn_data_container.hpp"
 
+#include "storage/io.hpp"
+
 #include "util/exception.hpp"
 #include "util/exception_utils.hpp"
 #include "util/integer_range.hpp"
 #include "util/log.hpp"
+#include "util/range_table.hpp"
+#include "util/timing_util.hpp"
+
+#include "extractor/compressed_edge_container.hpp"
+#include "extractor/restriction_index.hpp"
+#include "extractor/way_restriction_map.hpp"
 #include "util/static_graph.hpp"
 #include "util/static_rtree.hpp"
-#include "util/timing_util.hpp"
 
 // Keep debug include to make sure the debug header is in sync with types.
 #include "util/debug.hpp"
 
+#include "extractor/tarjan_scc.hpp"
+
 #include <boost/assert.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/iterator/function_input_iterator.hpp>
+#include <boost/optional/optional.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <osmium/handler/node_locations_for_ways.hpp>
 #include <osmium/index/map/flex_mem.hpp>
@@ -43,18 +54,18 @@
 #include <osmium/thread/pool.hpp>
 #include <osmium/visitor.hpp>
 
-#if TBB_VERSION_MAJOR == 2020
-#include <tbb/global_control.h>
-#else
-#include <tbb/task_scheduler_init.h>
-#endif
 #include <tbb/pipeline.h>
+#include <tbb/task_scheduler_init.h>
+
+#include <cstdlib>
 
 #include <algorithm>
 #include <atomic>
 #include <bitset>
 #include <chrono>
+#include <future>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <thread>
 #include <tuple>
@@ -177,7 +188,7 @@ std::vector<CompressedNodeBasedGraphEdge> toEdgeList(const util::NodeBasedDynami
 
     return edges;
 }
-} // namespace
+}
 
 /**
  * TODO: Refactor this function into smaller functions for better readability.
@@ -202,16 +213,11 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 {
     util::LogPolicy::GetInstance().Unmute();
 
-    const unsigned recommended_num_threads = std::thread::hardware_concurrency();
+    const unsigned recommended_num_threads = tbb::task_scheduler_init::default_num_threads();
     const auto number_of_threads = std::min(recommended_num_threads, config.requested_num_threads);
-
-#if TBB_VERSION_MAJOR == 2020
-    tbb::global_control gc(tbb::global_control::max_allowed_parallelism,
-                           config.requested_num_threads);
-#else
-    tbb::task_scheduler_init init(config.requested_num_threads);
+    tbb::task_scheduler_init init(number_of_threads ? number_of_threads
+                                                    : tbb::task_scheduler_init::automatic);
     BOOST_ASSERT(init.is_active());
-#endif
 
     LaneDescriptionMap turn_lane_map;
     std::vector<TurnRestriction> turn_restrictions;
@@ -233,9 +239,9 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
     EdgeBasedNodeDataContainer edge_based_nodes_container;
     std::vector<EdgeBasedNodeSegment> edge_based_node_segments;
     util::DeallocatingVector<EdgeBasedEdge> edge_based_edge_list;
+    std::vector<bool> node_is_startpoint;
     std::vector<EdgeWeight> edge_based_node_weights;
     std::vector<EdgeDuration> edge_based_node_durations;
-    std::vector<EdgeDistance> edge_based_node_distances;
     std::uint32_t ebg_connectivity_checksum = 0;
 
     // Create a node-based graph from the OSRM file
@@ -272,6 +278,16 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
     //
     // Luckily node based node ids still coincide with the coordinate array.
     // That's the reason we can only here write out the final compressed node based graph.
+
+    // Dumps to file asynchronously and makes sure we wait for its completion.
+    std::future<void> compressed_node_based_graph_writing;
+
+    BOOST_SCOPE_EXIT_ALL(&)
+    {
+        if (compressed_node_based_graph_writing.valid())
+            compressed_node_based_graph_writing.wait();
+    };
+
     files::writeCompressedNodeBasedGraph(config.GetPath(".osrm.cnbg").string(),
                                          toEdgeList(node_based_graph));
 
@@ -303,9 +319,9 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
                                scripting_environment,
                                edge_based_nodes_container,
                                edge_based_node_segments,
+                               node_is_startpoint,
                                edge_based_node_weights,
                                edge_based_node_durations,
-                               edge_based_node_distances,
                                edge_based_edge_list,
                                ebg_connectivity_checksum);
 
@@ -329,10 +345,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 
     util::Log() << "Saving edge-based node weights to file.";
     TIMER_START(timer_write_node_weights);
-    extractor::files::writeEdgeBasedNodeWeightsDurationsDistances(config.GetPath(".osrm.enw"),
-                                                                  edge_based_node_weights,
-                                                                  edge_based_node_durations,
-                                                                  edge_based_node_distances);
+    extractor::files::writeEdgeBasedNodeWeightsDurations(
+        config.GetPath(".osrm.enw"), edge_based_node_weights, edge_based_node_durations);
     TIMER_STOP(timer_write_node_weights);
     util::Log() << "Done writing. (" << TIMER_SEC(timer_write_node_weights) << ")";
 
@@ -344,7 +358,7 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 
     util::Log() << "Building r-tree ...";
     TIMER_START(rtree);
-    BuildRTree(std::move(edge_based_node_segments), coordinates);
+    BuildRTree(std::move(edge_based_node_segments), std::move(node_is_startpoint), coordinates);
 
     TIMER_STOP(rtree);
 
@@ -409,14 +423,6 @@ Extractor::ParseOSMData(ScriptingEnvironment &scripting_environment,
 
         // write .timestamp data file
         std::string timestamp = header.get("osmosis_replication_timestamp");
-        if (config.data_version == "osmosis")
-        {
-            files::writeTimestamp(config.GetPath(".osrm.timestamp").string(), timestamp);
-        }
-        else
-        {
-            files::writeTimestamp(config.GetPath(".osrm.timestamp").string(), config.data_version);
-        }
         if (timestamp.empty())
         {
             timestamp = "n/a";
@@ -493,6 +499,7 @@ Extractor::ParseOSMData(ScriptingEnvironment &scripting_environment,
     // OSM elements Lua parser
     tbb::filter_t<SharedBuffer, ParsedBuffer> buffer_transformer(
         tbb::filter::parallel, [&](const SharedBuffer buffer) {
+
             ParsedBuffer parsed_buffer;
             parsed_buffer.buffer = buffer;
             scripting_environment.ProcessElements(*buffer,
@@ -513,6 +520,7 @@ Extractor::ParseOSMData(ScriptingEnvironment &scripting_environment,
     unsigned number_of_maneuver_overrides = 0;
     tbb::filter_t<ParsedBuffer, void> buffer_storage(
         tbb::filter::serial_in_order, [&](const ParsedBuffer &parsed_buffer) {
+
             number_of_nodes += parsed_buffer.resulting_nodes.size();
             // put parsed objects thru extractor callbacks
             for (const auto &result : parsed_buffer.resulting_nodes)
@@ -536,6 +544,7 @@ Extractor::ParseOSMData(ScriptingEnvironment &scripting_environment,
             {
                 extractor_callbacks->ProcessManeuverOverride(result);
             }
+
         });
 
     tbb::filter_t<SharedBuffer, std::shared_ptr<ExtractionRelationContainer>> buffer_relation_cache(
@@ -577,13 +586,14 @@ Extractor::ParseOSMData(ScriptingEnvironment &scripting_environment,
     tbb::filter_t<std::shared_ptr<ExtractionRelationContainer>, void> buffer_storage_relation(
         tbb::filter::serial_in_order,
         [&](const std::shared_ptr<ExtractionRelationContainer> parsed_relations) {
+
             number_of_relations += parsed_relations->GetRelationsNum();
             relations.Merge(std::move(*parsed_relations));
         });
 
     // Parse OSM elements with parallel transformer
     // Number of pipeline tokens that yielded the best speedup was about 1.5 * num_cores
-    const auto num_threads = std::thread::hardware_concurrency() * 1.5;
+    const auto num_threads = tbb::task_scheduler_init::default_num_threads() * 1.5;
     const auto read_meta =
         config.use_metadata ? osmium::io::read_meta::yes : osmium::io::read_meta::no;
 
@@ -723,9 +733,9 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
     // output data
     EdgeBasedNodeDataContainer &edge_based_nodes_container,
     std::vector<EdgeBasedNodeSegment> &edge_based_node_segments,
+    std::vector<bool> &node_is_startpoint,
     std::vector<EdgeWeight> &edge_based_node_weights,
     std::vector<EdgeDuration> &edge_based_node_durations,
-    std::vector<EdgeDistance> &edge_based_node_distances,
     util::DeallocatingVector<EdgeBasedEdge> &edge_based_edge_list,
     std::uint32_t &connectivity_checksum)
 {
@@ -773,9 +783,9 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
 
     edge_based_graph_factory.GetEdgeBasedEdges(edge_based_edge_list);
     edge_based_graph_factory.GetEdgeBasedNodeSegments(edge_based_node_segments);
+    edge_based_graph_factory.GetStartPointMarkers(node_is_startpoint);
     edge_based_graph_factory.GetEdgeBasedNodeWeights(edge_based_node_weights);
     edge_based_graph_factory.GetEdgeBasedNodeDurations(edge_based_node_durations);
-    edge_based_graph_factory.GetEdgeBasedNodeDistances(edge_based_node_distances);
     connectivity_checksum = edge_based_graph_factory.GetConnectivityChecksum();
 
     return number_of_edge_based_nodes;
@@ -787,24 +797,35 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
     Saves tree into '.ramIndex' and leaves into '.fileIndex'.
  */
 void Extractor::BuildRTree(std::vector<EdgeBasedNodeSegment> edge_based_node_segments,
+                           std::vector<bool> node_is_startpoint,
                            const std::vector<util::Coordinate> &coordinates)
 {
     util::Log() << "Constructing r-tree of " << edge_based_node_segments.size()
                 << " segments build on-top of " << coordinates.size() << " coordinates";
 
+    BOOST_ASSERT(node_is_startpoint.size() == edge_based_node_segments.size());
+
     // Filter node based edges based on startpoint
-    auto start_point_count = std::accumulate(edge_based_node_segments.begin(),
-                                             edge_based_node_segments.end(),
-                                             0,
-                                             [](const size_t so_far, const auto &segment) {
-                                                 return so_far + (segment.is_startpoint ? 1 : 0);
-                                             });
-    if (start_point_count == 0)
+    auto out_iter = edge_based_node_segments.begin();
+    auto in_iter = edge_based_node_segments.begin();
+    for (auto index : util::irange<std::size_t>(0UL, node_is_startpoint.size()))
+    {
+        BOOST_ASSERT(in_iter != edge_based_node_segments.end());
+        if (node_is_startpoint[index])
+        {
+            *out_iter = *in_iter;
+            out_iter++;
+        }
+        in_iter++;
+    }
+    auto new_size = out_iter - edge_based_node_segments.begin();
+    if (new_size == 0)
     {
         throw util::exception("There are no snappable edges left after processing.  Are you "
                               "setting travel modes correctly in the profile?  Cannot continue." +
                               SOURCE_REF);
     }
+    edge_based_node_segments.resize(new_size);
 
     TIMER_START(construction);
     util::StaticRTree<EdgeBasedNodeSegment> rtree(

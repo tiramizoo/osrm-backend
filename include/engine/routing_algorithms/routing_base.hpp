@@ -85,17 +85,13 @@ void insertSourceInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
     {
         heap.Insert(phantom_node.forward_segment_id.id,
                     -phantom_node.GetForwardWeightPlusOffset(),
-                    {phantom_node.forward_segment_id.id,
-                     -phantom_node.GetForwardDuration(),
-                     -phantom_node.GetForwardDistance()});
+                    {phantom_node.forward_segment_id.id, -phantom_node.GetForwardDuration()});
     }
     if (phantom_node.IsValidReverseSource())
     {
         heap.Insert(phantom_node.reverse_segment_id.id,
                     -phantom_node.GetReverseWeightPlusOffset(),
-                    {phantom_node.reverse_segment_id.id,
-                     -phantom_node.GetReverseDuration(),
-                     -phantom_node.GetReverseDistance()});
+                    {phantom_node.reverse_segment_id.id, -phantom_node.GetReverseDuration()});
     }
 }
 
@@ -106,17 +102,13 @@ void insertTargetInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
     {
         heap.Insert(phantom_node.forward_segment_id.id,
                     phantom_node.GetForwardWeightPlusOffset(),
-                    {phantom_node.forward_segment_id.id,
-                     phantom_node.GetForwardDuration(),
-                     phantom_node.GetForwardDistance()});
+                    {phantom_node.forward_segment_id.id, phantom_node.GetForwardDuration()});
     }
     if (phantom_node.IsValidReverseTarget())
     {
         heap.Insert(phantom_node.reverse_segment_id.id,
                     phantom_node.GetReverseWeightPlusOffset(),
-                    {phantom_node.reverse_segment_id.id,
-                     phantom_node.GetReverseDuration(),
-                     phantom_node.GetReverseDistance()});
+                    {phantom_node.reverse_segment_id.id, phantom_node.GetReverseDuration()});
     }
 }
 
@@ -192,22 +184,17 @@ void annotatePath(const FacadeT &facade,
 
         const bool is_first_segment = unpacked_path.empty();
 
-        std::size_t start_index = 0;
-        if (is_first_segment)
-        {
-            unsigned short segment_position = phantom_node_pair.source_phantom.fwd_segment_position;
-            if (start_traversed_in_reverse)
-            {
-                segment_position = weight_vector.size() -
-                                   phantom_node_pair.source_phantom.fwd_segment_position - 1;
-            }
-            BOOST_ASSERT(segment_position >= 0);
-            start_index = static_cast<std::size_t>(segment_position);
-        }
+        const std::size_t start_index =
+            (is_first_segment ? ((start_traversed_in_reverse)
+                                     ? weight_vector.size() -
+                                           phantom_node_pair.source_phantom.fwd_segment_position - 1
+                                     : phantom_node_pair.source_phantom.fwd_segment_position)
+                              : 0);
         const std::size_t end_index = weight_vector.size();
 
         bool is_left_hand_driving = facade.IsLeftHandDriving(node_id);
 
+        BOOST_ASSERT(start_index >= 0);
         BOOST_ASSERT(start_index < end_index);
         for (std::size_t segment_idx = start_index; segment_idx < end_index; ++segment_idx)
         {

@@ -19,7 +19,7 @@ Feature: Barriers
             | entrance       | x     |
             | wall           |       |
             | fence          |       |
-            | some_tag       | x     |
+            | some_tag       |       |
             | block          | x     |
 
     Scenario: Foot - Access tag trumphs barriers

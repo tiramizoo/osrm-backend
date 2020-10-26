@@ -1,8 +1,6 @@
 
 #include <test.hpp>
 
-#include <array>
-
 TEST_CASE("read repeated packed float field") {
     // Run these tests twice, the second time we basically move the data
     // one byte down in the buffer. It doesn't matter how the data or buffer
@@ -30,7 +28,7 @@ TEST_CASE("read repeated packed float field") {
             auto it_range = item.get_packed_float();
             REQUIRE_FALSE(item.next());
 
-            REQUIRE(*it_range.begin() == Approx(17.34F));
+            REQUIRE(*it_range.begin() == Approx(17.34f));
             REQUIRE(std::next(it_range.begin()) == it_range.end());
         }
 
@@ -43,9 +41,9 @@ TEST_CASE("read repeated packed float field") {
             REQUIRE_FALSE(item.next());
 
             auto it = it_range.begin();
-            REQUIRE(*it++ == Approx(17.34F));
-            REQUIRE(*it++ == Approx( 0.0F));
-            REQUIRE(*it++ == Approx( 1.0F));
+            REQUIRE(*it++ == Approx(17.34f));
+            REQUIRE(*it++ == Approx( 0.0f));
+            REQUIRE(*it++ == Approx( 1.0f));
             REQUIRE(*it++ == std::numeric_limits<float>::min());
             REQUIRE(*it++ == std::numeric_limits<float>::max());
             REQUIRE(it == it_range.end());
@@ -57,7 +55,7 @@ TEST_CASE("read repeated packed float field") {
             for (std::string::size_type i = 1; i < abuffer.size() - n; ++i) {
                 protozero::pbf_reader item{abuffer.data() + n, i};
                 REQUIRE(item.next());
-                REQUIRE_THROWS_AS(item.get_packed_float(), protozero::end_of_buffer_exception);
+                REQUIRE_THROWS_AS(item.get_packed_float(), const protozero::end_of_buffer_exception&);
             }
         }
     }
@@ -68,21 +66,21 @@ TEST_CASE("write repeated packed float field") {
     protozero::pbf_writer pw{buffer};
 
     SECTION("empty") {
-        const std::array<float, 1> data = {{ 17.34F }};
+        float data[] = { 17.34f };
         pw.add_packed_float(1, std::begin(data), std::begin(data) /* !!!! */);
 
         REQUIRE(buffer == load_data("repeated_packed_float/data-empty"));
     }
 
     SECTION("one") {
-        const std::array<float, 1> data = {{ 17.34F }};
+        float data[] = { 17.34f };
         pw.add_packed_float(1, std::begin(data), std::end(data));
 
         REQUIRE(buffer == load_data("repeated_packed_float/data-one"));
     }
 
     SECTION("many") {
-        const std::array<float, 5> data = {{ 17.34F, 0.0F, 1.0F, std::numeric_limits<float>::min(), std::numeric_limits<float>::max() }};
+        float data[] = { 17.34f, 0.0f, 1.0f, std::numeric_limits<float>::min(), std::numeric_limits<float>::max() };
         pw.add_packed_float(1, std::begin(data), std::end(data));
 
         REQUIRE(buffer == load_data("repeated_packed_float/data-many"));

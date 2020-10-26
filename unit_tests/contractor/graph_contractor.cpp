@@ -3,14 +3,10 @@
 #include "../common/range_tools.hpp"
 #include "helper.hpp"
 
+#include <boost/test/test_case_template.hpp>
 #include <boost/test/unit_test.hpp>
 
-#include <tbb/tbb_stddef.h> // For version lookup
-#if TBB_VERSION_MAJOR == 2020
-#include <tbb/global_control.h>
-#else
 #include <tbb/task_scheduler_init.h>
-#endif
 
 using namespace osrm;
 using namespace osrm::contractor;
@@ -20,11 +16,7 @@ BOOST_AUTO_TEST_SUITE(graph_contractor)
 
 BOOST_AUTO_TEST_CASE(contract_graph)
 {
-#if TBB_VERSION_MAJOR == 2020
-    tbb::global_control scheduler(tbb::global_control::max_allowed_parallelism, 1);
-#else
     tbb::task_scheduler_init scheduler(1);
-#endif
     /*
      *                 <--1--<
      * (0) >--3--> (1) >--3--> (3)
@@ -97,7 +89,7 @@ BOOST_AUTO_TEST_CASE(contract_graph)
     reference_graph.DeleteEdgesTo(1, 3);
     reference_graph.DeleteEdgesTo(4, 3);
     // Insert shortcut
-    reference_graph.InsertEdge(4, 1, {2, 4, 1.0, 3, 0, true, true, false});
+    reference_graph.InsertEdge(4, 1, {2, 4, 3, 0, true, true, false});
 
     /* After contracting 4:
      *

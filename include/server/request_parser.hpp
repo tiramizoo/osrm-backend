@@ -61,6 +61,7 @@ class RequestParser
         header_line_start,
         header_lws,
         header_name,
+        space_before_header_value,
         header_value,
         expecting_newline_2,
         expecting_newline_3

@@ -17,19 +17,6 @@ test('trip: trip in Monaco', function(assert) {
     });
 });
 
-test('trip: trip in Monaco as a buffer', function(assert) {
-    assert.plan(3);
-    var osrm = new OSRM(data_path);
-    osrm.trip({coordinates: two_test_coordinates}, { format: 'json_buffer' }, function(err, trip) {
-        assert.ifError(err);
-        assert.ok(trip instanceof Buffer);
-        trip = JSON.parse(trip);
-        for (t = 0; t < trip.trips.length; t++) {
-            assert.ok(trip.trips[t].geometry);
-        }
-    });
-});
-
 test('trip: trip with many locations in Monaco', function(assert) {
     assert.plan(2);
 
@@ -46,14 +33,12 @@ test('trip: trip with many locations in Monaco', function(assert) {
 });
 
 test('trip: throws with too few or invalid args', function(assert) {
-    assert.plan(3);
+    assert.plan(2);
     var osrm = new OSRM(data_path);
     assert.throws(function() { osrm.trip({coordinates: two_test_coordinates}) },
         /Two arguments required/);
     assert.throws(function() { osrm.trip(null, function(err, trip) {}) },
         /First arg must be an object/);
-    assert.throws(function() { osrm.trip({coordinates: two_test_coordinates}, { format: 'invalid' }, function(err, trip) {}) },
-        /format must be a string:/);
 });
 
 test('trip: throws with bad params', function(assert) {

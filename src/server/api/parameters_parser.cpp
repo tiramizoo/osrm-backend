@@ -45,8 +45,9 @@ boost::optional<ParameterT> parseParameters(std::string::iterator &iter,
         const auto ok =
             boost::spirit::qi::parse(iter, end, grammar(boost::phoenix::ref(parameters)));
 
+        // return move(a.b) is needed to move b out of a and then return the rvalue by implicit move
         if (ok && iter == end)
-            return parameters;
+            return std::move(parameters);
     }
     catch (const qi::expectation_failure<It> &failure)
     {

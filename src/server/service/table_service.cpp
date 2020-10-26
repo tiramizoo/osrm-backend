@@ -56,23 +56,12 @@ std::string getWrongOptionHelp(const engine::api::TableParameters &parameters)
         help = "Number of coordinates needs to be at least two.";
     }
 
-    if (parameters.fallback_speed <= 0)
-    {
-        help = "fallback_speed must be > 0";
-    }
-
-    if (parameters.scale_factor <= 0)
-    {
-        help = "scale_factor must be > 0";
-    }
-
     return help;
 }
 } // anon. ns
 
-engine::Status TableService::RunQuery(std::size_t prefix_length,
-                                      std::string &query,
-                                      osrm::engine::api::ResultT &result)
+engine::Status
+TableService::RunQuery(std::size_t prefix_length, std::string &query, ResultT &result)
 {
     result = util::json::Object();
     auto &json_result = result.get<util::json::Object>();
@@ -98,14 +87,7 @@ engine::Status TableService::RunQuery(std::size_t prefix_length,
     }
     BOOST_ASSERT(parameters->IsValid());
 
-    if (parameters->format)
-    {
-        if (parameters->format == engine::api::BaseParameters::OutputFormatType::FLATBUFFERS)
-        {
-            result = flatbuffers::FlatBufferBuilder();
-        }
-    }
-    return BaseService::routing_machine.Table(*parameters, result);
+    return BaseService::routing_machine.Table(*parameters, json_result);
 }
 }
 }

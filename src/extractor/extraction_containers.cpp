@@ -387,16 +387,12 @@ void ExtractionContainers::PrepareEdges(ScriptingEnvironment &scripting_environm
             const auto weight = edge_iterator->weight_data(distance);
             const auto duration = edge_iterator->duration_data(distance);
 
-            const auto accurate_distance =
-                util::coordinate_calculation::fccApproximateDistance(source_coord, target_coord);
-
             ExtractionSegment segment(source_coord, target_coord, distance, weight, duration);
             scripting_environment.ProcessSegment(segment);
 
             auto &edge = edge_iterator->result;
             edge.weight = std::max<EdgeWeight>(1, std::round(segment.weight * weight_multiplier));
             edge.duration = std::max<EdgeWeight>(1, std::round(segment.duration * 10.));
-            edge.distance = accurate_distance;
 
             // assign new node id
             const auto node_id = mapExternalToInternalNodeID(
@@ -434,6 +430,7 @@ void ExtractionContainers::PrepareEdges(ScriptingEnvironment &scripting_environm
         util::UnbufferedLog log;
         log << "Sorting edges by renumbered start ... ";
         TIMER_START(sort_edges_by_renumbered_start);
+        std::mutex name_data_mutex;
         tbb::parallel_sort(all_edges_list.begin(),
                            all_edges_list.end(),
                            CmpEdgeByInternalSourceTargetAndName{

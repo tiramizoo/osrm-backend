@@ -17,8 +17,6 @@
 #include <boost/spirit/include/phoenix.hpp>
 #include <boost/spirit/include/qi.hpp>
 
-#include <exception>
-#include <stdexcept>
 #include <vector>
 
 namespace osrm
@@ -82,9 +80,7 @@ template <typename Key, typename Value> struct CSVFilesParser
 
             return LookupTable<Key, Value>{lookup};
         }
-        catch (const std::exception &e)
-        // TBB should capture to std::exception_ptr and automatically rethrow in this thread.
-        // https://software.intel.com/en-us/node/506317
+        catch (const tbb::captured_exception &e)
         {
             throw util::exception(e.what() + SOURCE_REF);
         }
@@ -126,7 +122,7 @@ template <typename Key, typename Value> struct CSVFilesParser
 
             util::Log() << "Loaded " << filename << " with " << result.size() << "values";
 
-            return result;
+            return std::move(result);
         }
         catch (const boost::exception &e)
         {

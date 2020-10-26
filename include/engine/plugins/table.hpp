@@ -22,7 +22,7 @@ class TablePlugin final : public BasePlugin
 
     Status HandleRequest(const RoutingAlgorithmsInterface &algorithms,
                          const api::TableParameters &params,
-                         osrm::engine::api::ResultT &result) const;
+                         util::json::Object &result) const;
 
   private:
     const int max_locations_distance_table;

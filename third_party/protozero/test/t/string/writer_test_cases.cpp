@@ -1,20 +1,19 @@
 
-#include <buffer.hpp>
+#include <test.hpp>
 
 #include "t/string/string_testcase.pb.h"
 
-TEMPLATE_TEST_CASE("write string field and check with libprotobuf", "",
-    buffer_test_string, buffer_test_vector, buffer_test_array, buffer_test_external) {
+TEST_CASE("write string field and check with libprotobuf") {
 
-    TestType buffer;
-    typename TestType::writer_type pw{buffer.buffer()};
+    std::string buffer;
+    protozero::pbf_writer pw{buffer};
 
     TestString::Test msg;
 
     SECTION("empty") {
         pw.add_string(1, "");
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE(msg.s().empty());
     }
@@ -22,7 +21,7 @@ TEMPLATE_TEST_CASE("write string field and check with libprotobuf", "",
     SECTION("one") {
         pw.add_string(1, "x");
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE(msg.s() == "x");
     }
@@ -30,7 +29,7 @@ TEMPLATE_TEST_CASE("write string field and check with libprotobuf", "",
     SECTION("string") {
         pw.add_string(1, "foobar");
 
-        msg.ParseFromArray(buffer.data(), buffer.size());
+        msg.ParseFromString(buffer);
 
         REQUIRE(msg.s() == "foobar");
     }

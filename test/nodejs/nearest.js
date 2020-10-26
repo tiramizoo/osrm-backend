@@ -19,21 +19,6 @@ test('nearest', function(assert) {
     });
 });
 
-test('nearest', function(assert) {
-    assert.plan(5);
-    var osrm = new OSRM(data_path);
-    osrm.nearest({
-        coordinates: [three_test_coordinates[0]]
-    }, { format: 'json_buffer' }, function(err, result) {
-        assert.ifError(err);
-        assert.ok(result instanceof Buffer);
-        result = JSON.parse(result);
-        assert.equal(result.waypoints.length, 1);
-        assert.equal(result.waypoints[0].location.length, 2);
-        assert.ok(result.waypoints[0].hasOwnProperty('name'));
-    });
-});
-
 test('nearest: can ask for multiple nearest pts', function(assert) {
     assert.plan(2);
     var osrm = new OSRM(data_path);
@@ -47,7 +32,7 @@ test('nearest: can ask for multiple nearest pts', function(assert) {
 });
 
 test('nearest: throws on invalid args', function(assert) {
-    assert.plan(7);
+    assert.plan(6);
     var osrm = new OSRM(data_path);
     var options = {};
     assert.throws(function() { osrm.nearest(options); },
@@ -67,10 +52,6 @@ test('nearest: throws on invalid args', function(assert) {
     options.number = 0;
     assert.throws(function() { osrm.nearest(options, function(err, res) {}); },
         /Number must be an integer greater than or equal to 1/);
-
-    options.number = 1;
-    assert.throws(function() { osrm.nearest(options, { format: 'invalid' }, function(err, res) {}); },
-        /format must be a string:/);
 });
 
 test('nearest: nearest in Monaco without motorways', function(assert) {

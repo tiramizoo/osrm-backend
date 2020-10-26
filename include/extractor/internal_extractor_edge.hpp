@@ -63,7 +63,7 @@ struct InternalExtractorEdge
                                    WeightData weight_data,
                                    DurationData duration_data,
                                    util::Coordinate source_coordinate)
-        : result(source, target, 0, 0, 0, {}, -1, {}), weight_data(std::move(weight_data)),
+        : result(source, target, 0, 0, {}, -1, {}), weight_data(std::move(weight_data)),
           duration_data(std::move(duration_data)), source_coordinate(std::move(source_coordinate))
     {
     }
@@ -85,6 +85,33 @@ struct InternalExtractorEdge
     DurationData duration_data;
     // coordinate of the source node
     util::Coordinate source_coordinate;
+
+    // necessary static util functions for stxxl's sorting
+    static InternalExtractorEdge min_osm_value()
+    {
+        return InternalExtractorEdge(
+            MIN_OSM_NODEID, MIN_OSM_NODEID, WeightData(), DurationData(), util::Coordinate());
+    }
+    static InternalExtractorEdge max_osm_value()
+    {
+        return InternalExtractorEdge(
+            MAX_OSM_NODEID, MAX_OSM_NODEID, WeightData(), DurationData(), util::Coordinate());
+    }
+
+    static InternalExtractorEdge min_internal_value()
+    {
+        auto v = min_osm_value();
+        v.result.source = 0;
+        v.result.target = 0;
+        return v;
+    }
+    static InternalExtractorEdge max_internal_value()
+    {
+        auto v = max_osm_value();
+        v.result.source = std::numeric_limits<NodeID>::max();
+        v.result.target = std::numeric_limits<NodeID>::max();
+        return v;
+    }
 };
 }
 }

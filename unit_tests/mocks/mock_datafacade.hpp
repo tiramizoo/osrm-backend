@@ -10,6 +10,7 @@
 #include "extractor/turn_lane_types.hpp"
 #include "guidance/turn_bearing.hpp"
 #include "guidance/turn_instruction.hpp"
+#include "guidance/turn_instruction.hpp"
 
 #include "engine/algorithm.hpp"
 #include "engine/datafacade/algorithm_datafacade.hpp"
@@ -53,7 +54,6 @@ class MockBaseDataFacade : public engine::datafacade::BaseDataFacade
     {
         return 0;
     }
-    std::string GetTimestamp() const override { return ""; }
     NodeForwardRange GetUncompressedForwardGeometry(const EdgeID /* id */) const override
     {
         static NodeID data[] = {0, 1, 2, 3};
@@ -113,8 +113,7 @@ class MockBaseDataFacade : public engine::datafacade::BaseDataFacade
                                const float /*max_distance*/,
                                const int /*bearing*/,
                                const int /*bearing_range*/,
-                               const engine::Approach /*approach*/,
-                               const bool /*use_all_edges*/) const override
+                               const engine::Approach /*approach*/) const override
     {
         return {};
     }
@@ -122,8 +121,7 @@ class MockBaseDataFacade : public engine::datafacade::BaseDataFacade
     std::vector<engine::PhantomNodeWithDistance>
     NearestPhantomNodesInRange(const util::Coordinate /*input_coordinate*/,
                                const float /*max_distance*/,
-                               const engine::Approach /*approach*/,
-                               const bool /*use_all_edges*/) const override
+                               const engine::Approach /*approach*/) const override
     {
         return {};
     }
@@ -167,39 +165,39 @@ class MockBaseDataFacade : public engine::datafacade::BaseDataFacade
     }
 
     std::pair<engine::PhantomNode, engine::PhantomNode>
-    NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
-                                                      const engine::Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+    NearestPhantomNodeWithAlternativeFromBigComponent(
+        const util::Coordinate /*input_coordinate*/,
+        const engine::Approach /*approach*/) const override
     {
         return {};
     }
 
     std::pair<engine::PhantomNode, engine::PhantomNode>
-    NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
-                                                      const double /*max_distance*/,
-                                                      const engine::Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+    NearestPhantomNodeWithAlternativeFromBigComponent(
+        const util::Coordinate /*input_coordinate*/,
+        const double /*max_distance*/,
+        const engine::Approach /*approach*/) const override
     {
         return {};
     }
 
     std::pair<engine::PhantomNode, engine::PhantomNode>
-    NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
-                                                      const double /*max_distance*/,
-                                                      const int /*bearing*/,
-                                                      const int /*bearing_range*/,
-                                                      const engine::Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+    NearestPhantomNodeWithAlternativeFromBigComponent(
+        const util::Coordinate /*input_coordinate*/,
+        const double /*max_distance*/,
+        const int /*bearing*/,
+        const int /*bearing_range*/,
+        const engine::Approach /*approach*/) const override
     {
         return {};
     }
 
     std::pair<engine::PhantomNode, engine::PhantomNode>
-    NearestPhantomNodeWithAlternativeFromBigComponent(const util::Coordinate /*input_coordinate*/,
-                                                      const int /*bearing*/,
-                                                      const int /*bearing_range*/,
-                                                      const engine::Approach /*approach*/,
-                                                      const bool /* use_all_edges */) const override
+    NearestPhantomNodeWithAlternativeFromBigComponent(
+        const util::Coordinate /*input_coordinate*/,
+        const int /*bearing*/,
+        const int /*bearing_range*/,
+        const engine::Approach /*approach*/) const override
     {
         return {};
     }

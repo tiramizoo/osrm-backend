@@ -1,3 +1,4 @@
+#include <boost/test/test_case_template.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include "fixture.hpp"
@@ -35,7 +36,7 @@ void validate_feature_layer(vtzero::layer layer)
     BOOST_CHECK_EQUAL(layer.version(), 2);
     BOOST_CHECK_EQUAL(to_string(layer.name()), "speeds");
     BOOST_CHECK_EQUAL(layer.extent(), osrm::util::vector_tile::EXTENT);
-    BOOST_CHECK_EQUAL(layer.key_table().size(), 8);
+    BOOST_CHECK_EQUAL(layer.key_table().size(), 7);
     BOOST_CHECK(layer.num_features() > 2500);
 
     while (auto feature = layer.next_feature())
@@ -61,9 +62,6 @@ void validate_feature_layer(vtzero::layer layer)
         BOOST_CHECK(props.find("is_small") != props.end());
         BOOST_CHECK(props["is_small"].type() == typeid(bool));
 
-        BOOST_CHECK(props.find("is_startpoint") != props.end());
-        BOOST_CHECK(props["is_startpoint"].type() == typeid(bool));
-
         BOOST_CHECK(props.find("datasource") != props.end());
         BOOST_CHECK(props["datasource"].type() == typeid(std::string));
 
@@ -75,7 +73,7 @@ void validate_feature_layer(vtzero::layer layer)
         std::count_if(layer.value_table().begin(), layer.value_table().end(), [](auto v) {
             return v.type() == vtzero::property_value_type::uint_value;
         });
-    BOOST_CHECK_EQUAL(number_of_uint_values, 78);
+    BOOST_CHECK_EQUAL(number_of_uint_values, 77);
 }
 
 void validate_turn_layer(vtzero::layer layer)
@@ -127,7 +125,7 @@ void validate_node_layer(vtzero::layer layer)
     BOOST_CHECK_EQUAL(to_string(layer.name()), "osmnodes");
     BOOST_CHECK_EQUAL(layer.extent(), osrm::util::vector_tile::EXTENT);
     BOOST_CHECK_EQUAL(layer.key_table().size(), 0);
-    BOOST_CHECK_EQUAL(layer.num_features(), 1810);
+    BOOST_CHECK_EQUAL(layer.num_features(), 1791);
 
     while (auto feature = layer.next_feature())
     {
@@ -160,15 +158,13 @@ void validate_tile(const osrm::OSRM &osrm)
     // This tile should contain most of monaco
     TileParameters params{17059, 11948, 15};
 
-    engine::api::ResultT result = std::string();
-
+    std::string result;
     const auto rc = osrm.Tile(params, result);
     BOOST_CHECK(rc == Status::Ok);
 
-    auto &str_result = result.get<std::string>();
-    BOOST_CHECK(str_result.size() > 114000);
+    BOOST_CHECK(result.size() > 114000);
 
-    vtzero::vector_tile tile{str_result};
+    vtzero::vector_tile tile{result};
 
     validate_feature_layer(tile.next_layer());
     validate_turn_layer(tile.next_layer());
@@ -207,14 +203,13 @@ void test_tile_turns(const osrm::OSRM &osrm)
     // Small tile where we can test all the values
     TileParameters params{272953, 191177, 19};
 
-    engine::api::ResultT result = std::string();
+    std::string result;
     const auto rc = osrm.Tile(params, result);
     BOOST_CHECK(rc == Status::Ok);
 
-    auto &str_result = result.get<std::string>();
-    BOOST_CHECK_GT(str_result.size(), 128);
+    BOOST_CHECK_GT(result.size(), 128);
 
-    vtzero::vector_tile tile{str_result};
+    vtzero::vector_tile tile{result};
 
     tile.next_layer();
     auto layer = tile.next_layer();
@@ -349,14 +344,13 @@ void test_tile_speeds(const osrm::OSRM &osrm)
     // TileParameters params{272953, 191177, 19};
     TileParameters params{136477, 95580, 18};
 
-    engine::api::ResultT result = std::string();
+    std::string result;
     const auto rc = osrm.Tile(params, result);
     BOOST_CHECK(rc == Status::Ok);
 
-    auto &str_result = result.get<std::string>();
-    BOOST_CHECK_GT(str_result.size(), 128);
+    BOOST_CHECK_GT(result.size(), 128);
 
-    vtzero::vector_tile tile{str_result};
+    vtzero::vector_tile tile{result};
 
     auto layer = tile.next_layer();
     BOOST_CHECK_EQUAL(to_string(layer.name()), "speeds");
@@ -430,14 +424,13 @@ void test_tile_nodes(const osrm::OSRM &osrm)
     // Small tile where we can test all the values
     TileParameters params{272953, 191177, 19};
 
-    engine::api::ResultT result = std::string();
+    std::string result;
     const auto rc = osrm.Tile(params, result);
     BOOST_CHECK(rc == Status::Ok);
 
-    auto &str_result = result.get<std::string>();
-    BOOST_CHECK_GT(str_result.size(), 128);
+    BOOST_CHECK_GT(result.size(), 128);
 
-    vtzero::vector_tile tile{str_result};
+    vtzero::vector_tile tile{result};
 
     tile.next_layer();
     tile.next_layer();

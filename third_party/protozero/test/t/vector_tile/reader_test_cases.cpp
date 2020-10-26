@@ -11,7 +11,6 @@ static std::string get_name(protozero::pbf_reader layer) { // copy!
     while (layer.next(1)) { // required string name
         return layer.get_string();
     }
-    REQUIRE(false); // should never be here
     return "";
 }
 
@@ -43,7 +42,6 @@ TEST_CASE("reading vector tiles") {
                 }
             } else {
                 item.skip();
-                REQUIRE(false); // should never be here
             }
         }
 

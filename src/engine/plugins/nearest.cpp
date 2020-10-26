@@ -21,11 +21,11 @@ NearestPlugin::NearestPlugin(const int max_results_) : max_results{max_results_}
 
 Status NearestPlugin::HandleRequest(const RoutingAlgorithmsInterface &algorithms,
                                     const api::NearestParameters &params,
-                                    osrm::engine::api::ResultT &result) const
+                                    util::json::Object &json_result) const
 {
     BOOST_ASSERT(params.IsValid());
 
-    if (!CheckAlgorithms(params, algorithms, result))
+    if (!CheckAlgorithms(params, algorithms, json_result))
         return Status::Error;
 
     const auto &facade = algorithms.GetFacade();
@@ -36,27 +36,27 @@ Status NearestPlugin::HandleRequest(const RoutingAlgorithmsInterface &algorithms
         return Error("TooBig",
                      "Number of results " + std::to_string(params.number_of_results) +
                          " is higher than current maximum (" + std::to_string(max_results) + ")",
-                     result);
+                     json_result);
     }
 
     if (!CheckAllCoordinates(params.coordinates))
-        return Error("InvalidOptions", "Coordinates are invalid", result);
+        return Error("InvalidOptions", "Coordinates are invalid", json_result);
 
     if (params.coordinates.size() != 1)
     {
-        return Error("InvalidOptions", "Only one input coordinate is supported", result);
+        return Error("InvalidOptions", "Only one input coordinate is supported", json_result);
     }
 
     auto phantom_nodes = GetPhantomNodes(facade, params, params.number_of_results);
 
     if (phantom_nodes.front().size() == 0)
     {
-        return Error("NoSegment", "Could not find a matching segments for coordinate", result);
+        return Error("NoSegment", "Could not find a matching segments for coordinate", json_result);
     }
     BOOST_ASSERT(phantom_nodes.front().size() > 0);
 
     api::NearestAPI nearest_api(facade, params);
-    nearest_api.MakeResponse(phantom_nodes, result);
+    nearest_api.MakeResponse(phantom_nodes, json_result);
 
     return Status::Ok;
 }
