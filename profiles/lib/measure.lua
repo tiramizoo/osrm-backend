@@ -5,6 +5,7 @@ Measure = {}
 -- measurements conversion constants
 local inch_to_meters = 0.0254
 local feet_to_inches = 12
+local pound_to_kilograms = 0.45359237
 
 --- Parse string as a height in meters.
 --- according to http://wiki.openstreetmap.org/wiki/Key:maxheight
@@ -25,33 +26,17 @@ function Measure.parse_value_meters(value)
   end
 end
 
---- according to http://wiki.openstreetmap.org/wiki/Map_Features/Units#Explicit_specifications
-local tonns_parse_patterns = Sequence {
-  "%d+",
-  "%d+.%d+",
-  "%d+.%d+ ?t"
-}
-
-local kg_parse_patterns = Sequence {
-  "%d+ ?kg"
-}
-
---- Parse weight value in kilograms
 function Measure.parse_value_kilograms(value)
-  -- try to parse kilograms
-  for i, templ in ipairs(kg_parse_patterns) do
-    m = string.match(value, templ)
-    if m then
-      return tonumber(m)
+  local n = tonumber(value:gsub(",", "."):match("%d+%.?%d*"))
+  if n then
+    if string.match(value, "lbs") then
+      n = n * pound_to_kilograms
+    elseif string.match(value, "kg") then
+      -- n = n
+    else -- Default, metric tons
+      n = n * 1000
     end
-  end
-
-  -- try to parse tonns
-  for i, templ in ipairs(tonns_parse_patterns) do
-    m = string.match(value, templ)
-    if m then
-      return tonumber(m) * 1000
-    end
+    return n
   end
 end
 
@@ -73,6 +58,13 @@ function Measure.get_max_height(raw_value, element)
     else
       return Measure.parse_value_meters(raw_value)
     end
+  end
+end
+
+--- Get maxlength of specified way in meters.
+function Measure.get_max_length(raw_value)
+  if raw_value then
+    return Measure.parse_value_meters(raw_value)
   end
 end
 
