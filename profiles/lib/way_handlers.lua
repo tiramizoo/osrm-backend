@@ -1,7 +1,3 @@
--- Prepared for trucks
--- Source: https://github.com/Project-OSRM/osrm-profiles-contrib/blob/master/5/21/truck-soft/lib/way_handlers.lua
--- source diff: https://github.com/Project-OSRM/osrm-profiles-contrib/blob/master/5/21/truck-soft/truck-soft.diff
-
 -- Profile handlers dealing with various aspects of tag parsing
 --
 -- You can run a selection you find useful in your profile,
@@ -442,7 +438,7 @@ end
 
 -- maxspeed and advisory maxspeed
 function WayHandlers.maxspeed(profile,way,result,data)
-  local keys = Sequence {  'maxspeed:advisory', 'maxspeed', 'source:maxspeed', 'maxspeed:type' }
+  local keys = Sequence { 'maxspeed:advisory', 'maxspeed' }
   local forward, backward = Tags.get_forward_backward_by_set(way,data,keys)
   forward = WayHandlers.parse_maxspeed(forward,profile)
   backward = WayHandlers.parse_maxspeed(backward,profile)
@@ -460,9 +456,12 @@ function WayHandlers.parse_maxspeed(source,profile)
   if not source then
     return 0
   end
-
-  local n = Measure.get_max_speed(source)
-  if not n then
+  local n = tonumber(source:match("%d*"))
+  if n then
+    if string.match(source, "mph") or string.match(source, "mp/h") then
+      n = (n*1609)/1000
+    end
+  else
     -- parse maxspeed like FR:urban
     source = string.lower(source)
     n = profile.maxspeed_table[source]
