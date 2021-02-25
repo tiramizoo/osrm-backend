@@ -134,7 +134,8 @@ function setup()
       'hov_lanes',
       'steps',
       'construction',
-      'proposed'
+      'proposed',
+      'ferry'
     },
 
     speeds = Sequence {
